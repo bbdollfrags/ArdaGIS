@@ -14,25 +14,46 @@
     <div id="map"></div>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // Custom tile layer with coordinate transformation
+        // Custom tile layer with fallback for different scales
         L.TileLayer.CustomTiles = L.TileLayer.extend({
             getTileUrl: function(coords) {
-                // Transform Leaflet coordinates to your tile naming
-                var z = 1; // Force zoom 1 for now
-                var x = coords.x + 1; // Offset by 1
-                var y = coords.y + 1; // Offset by 1
+                // Try _4 first (most common), then _16, then _1
+                return 'Tiles/' + coords.z + '_' + coords.x + '_' + coords.y + '_4.jpg';
+            },
+            
+            createTile: function(coords, done) {
+                var tile = document.createElement('img');
+                var url = this.getTileUrl(coords);
                 
-                var url = 'Tiles/' + z + '_' + x + '_' + y + '_4.jpg';
-                console.log('Requesting:', url, 'from coords:', coords.x, coords.y);
-                return url;
+                tile.onload = function() {
+                    done(null, tile);
+                };
+                
+                tile.onerror = function() {
+                    // Try _16 scale if _4 fails
+                    var url16 = 'Tiles/' + coords.z + '_' + coords.x + '_' + coords.y + '_16.jpg';
+                    tile.onerror = function() {
+                        // Try _1 scale if _16 fails
+                        var url1 = 'Tiles/' + coords.z + '_' + coords.x + '_' + coords.y + '_1.jpg';
+                        tile.onerror = function() {
+                            done(null, tile);
+                        };
+                        tile.src = url1;
+                    };
+                    tile.src = url16;
+                };
+                
+                tile.src = url;
+                return tile;
             }
         });
 
-        // Create map with very specific settings
+        // Create map with CRS.Simple for non-geographic tiles
         const map = L.map('map', {
             crs: L.CRS.Simple,
-            minZoom: -2,
-            maxZoom: 2
+            minZoom: 1,
+            maxZoom: 5,
+            maxBounds: [[0, 0], [200, 200]]
         });
 
         new L.TileLayer.CustomTiles('', {
@@ -41,8 +62,8 @@
             noWrap: true
         }).addTo(map);
 
-        // Center on a coordinate we know exists
-        map.setView([50, 50], 0);
+        // Center the map
+        map.setView([80, 80], 2);
     </script>
 </body>
 </html>
