@@ -17,8 +17,10 @@
         // Custom tile layer with fallback for different scales
         L.TileLayer.CustomTiles = L.TileLayer.extend({
             getTileUrl: function(coords) {
-                // Try _4 first (most common), then _16, then _1
-                return 'Tiles/' + coords.z + '_' + coords.x + '_' + coords.y + '_4.jpg';
+                // Offset coordinates - your tiles start from 1,1 not 0,0
+                var x = coords.x + 1;
+                var y = coords.y + 1;
+                return 'Tiles/' + coords.z + '_' + x + '_' + y + '_4.jpg';
             },
             
             createTile: function(coords, done) {
