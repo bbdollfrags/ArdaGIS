@@ -56,18 +56,23 @@
         const map = L.map('map', {
             crs: L.CRS.Simple,
             minZoom: 1,
-            maxZoom: 5,
-            maxBounds: [[0, 0], [200, 200]]
+            maxZoom: 5
         });
+
+        // Calculate proper bounds based on tile ranges
+        // Zoom 2 has tiles roughly x:1-169, y:1-173
+        var bounds = [[0, 0], [173 * 256, 169 * 256]];
+        map.fitBounds([[0, 0], [40000, 40000]]);
 
         new L.TileLayer.CustomTiles('', {
             attribution: 'ArdaGIS',
             tileSize: 256,
-            noWrap: true
+            noWrap: true,
+            bounds: [[0, 0], [50000, 50000]]
         }).addTo(map);
 
-        // Center the map
-        map.setView([80, 80], 2);
+        // Center the map on visible tiles
+        map.setView([20000, 20000], 2);
     </script>
 </body>
 </html>
