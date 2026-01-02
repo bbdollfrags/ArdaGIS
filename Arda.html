@@ -25,7 +25,9 @@
             
             createTile: function(coords, done) {
                 var tile = document.createElement('img');
-                var url = this.getTileUrl(coords);
+                var x = coords.x + 1;
+                var y = coords.y + 1;
+                var url = 'Tiles/' + coords.z + '_' + x + '_' + y + '_4.jpg';
                 
                 tile.onload = function() {
                     done(null, tile);
@@ -33,10 +35,10 @@
                 
                 tile.onerror = function() {
                     // Try _16 scale if _4 fails
-                    var url16 = 'Tiles/' + coords.z + '_' + coords.x + '_' + coords.y + '_16.jpg';
+                    var url16 = 'Tiles/' + coords.z + '_' + x + '_' + y + '_16.jpg';
                     tile.onerror = function() {
                         // Try _1 scale if _16 fails
-                        var url1 = 'Tiles/' + coords.z + '_' + coords.x + '_' + coords.y + '_1.jpg';
+                        var url1 = 'Tiles/' + coords.z + '_' + x + '_' + y + '_1.jpg';
                         tile.onerror = function() {
                             done(null, tile);
                         };
