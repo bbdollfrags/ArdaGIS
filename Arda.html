@@ -14,37 +14,35 @@
     <div id="map"></div>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // Custom tile layer to handle the non-standard naming
+        // Custom tile layer with coordinate transformation
         L.TileLayer.CustomTiles = L.TileLayer.extend({
             getTileUrl: function(coords) {
-                // Only return URL if coordinates are valid
-                if (coords.z === 1 && coords.x >= 1 && coords.x <= 149 && coords.y >= 1 && coords.y <= 153) {
-                    return 'Tiles/' + coords.z + '_' + coords.x + '_' + coords.y + '_4.jpg';
-                }
-                // Return empty string for invalid tiles
-                return '';
+                // Transform Leaflet coordinates to your tile naming
+                var z = 1; // Force zoom 1 for now
+                var x = coords.x + 1; // Offset by 1
+                var y = coords.y + 1; // Offset by 1
+                
+                var url = 'Tiles/' + z + '_' + x + '_' + y + '_4.jpg';
+                console.log('Requesting:', url, 'from coords:', coords.x, coords.y);
+                return url;
             }
         });
 
+        // Create map with very specific settings
         const map = L.map('map', {
             crs: L.CRS.Simple,
-            minZoom: 1,
-            maxZoom: 1
+            minZoom: -2,
+            maxZoom: 2
         });
-
-        // Calculate bounds based on tile coordinates and tile size
-        var tileSize = 256;
-        var bounds = [[0, 0], [153 * tileSize, 149 * tileSize]];
-        
-        map.fitBounds(bounds);
-        map.setMaxBounds(bounds);
 
         new L.TileLayer.CustomTiles('', {
             attribution: 'ArdaGIS',
-            tileSize: tileSize,
-            noWrap: true,
-            bounds: bounds
+            tileSize: 256,
+            noWrap: true
         }).addTo(map);
+
+        // Center on a coordinate we know exists
+        map.setView([50, 50], 0);
     </script>
 </body>
 </html>
