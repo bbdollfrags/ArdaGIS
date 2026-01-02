@@ -17,15 +17,24 @@
         // Based on LotRO map structure - tiles named z_x_y_scale.jpg
         var map = L.map('map', {
             crs: L.CRS.Simple,
-            minZoom: 0,
-            maxZoom: 5,
-            center: [128, 128],
-            zoom: 2
+            minZoom: 1,
+            maxZoom: 5
         });
+
+        // Set bounds to only positive coordinates where tiles exist
+        var bounds = [[0, 0], [50000, 50000]];
+        map.fitBounds(bounds);
+        map.setView([10000, 10000], 2);
 
         var yx = L.GridLayer.extend({
             createTile: function(coords){
                 var tile = L.DomUtil.create('img', 'leaflet-tile');
+                
+                // Don't load tiles with negative coordinates
+                if (coords.x < 0 || coords.y < 0) {
+                    return tile;
+                }
+                
                 var z = coords.z;
                 var x = coords.x;
                 var y = coords.y;
