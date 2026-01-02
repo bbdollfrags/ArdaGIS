@@ -1,61 +1,93 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ArdaGIS</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ArdaGIS</title>
+<style>
+* {
+margin: 0;
+padding: 0;
+box-sizing: border-box;
         }
-
-        body {
-            background-color: #000;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            font-family: 'Georgia', serif;
+body {
+background-color: #000;
+display: flex;
+justify-content: center;
+align-items: center;
+min-height: 100vh;
+font-family: 'Georgia', serif;
         }
-
-        .logo {
-            font-size: 8rem;
-            font-weight: bold;
-            letter-spacing: -0.02em;
+.container {
+display: flex;
+flex-direction: column;
+align-items: center;
+gap: 3rem;
         }
-
-        .arda {
-            background: linear-gradient(to bottom, #ffffff 0%, #e8e8e8 50%, #808080 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+.logo {
+font-size: 8rem;
+font-weight: bold;
+letter-spacing: -0.02em;
         }
-
-        .gis {
-            background: linear-gradient(to bottom, #ffed4e 0%, #d4af37 50%, #8b7355 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+.arda {
+background: linear-gradient(to bottom, #ffffff 0%, #e8e8e8 50%, #808080 100%);
+-webkit-background-clip: text;
+-webkit-text-fill-color: transparent;
+background-clip: text;
         }
-
-        @media (max-width: 768px) {
-            .logo {
-                font-size: 4rem;
+.gis {
+background: linear-gradient(to bottom, #ffed4e 0%, #d4af37 50%, #8b7355 100%);
+-webkit-background-clip: text;
+-webkit-text-fill-color: transparent;
+background-clip: text;
+        }
+.begin-btn {
+padding: 1.2rem 3rem;
+font-size: 1.5rem;
+font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+font-weight: 600;
+color: #1a1a1a;
+background: #808080;
+border: 2px solid #808080;
+border-radius: 8px;
+cursor: pointer;
+transition: all 0.3s ease;
+        }
+.begin-btn:hover {
+transform: translateY(-2px);
+background: rgba(128, 128, 128, 0.2);
+color: #808080;
+border: 2px solid #808080;
+        }
+.begin-btn:active {
+transform: translateY(0);
+        }
+@media (max-width: 768px) {
+.logo {
+font-size: 4rem;
+            }
+.begin-btn {
+font-size: 1.2rem;
+padding: 1rem 2.5rem;
             }
         }
-
-        @media (max-width: 480px) {
-            .logo {
-                font-size: 3rem;
+@media (max-width: 480px) {
+.logo {
+font-size: 3rem;
+            }
+.begin-btn {
+font-size: 1rem;
+padding: 0.8rem 2rem;
             }
         }
-    </style>
+</style>
 </head>
 <body>
-    <div class="logo">
-        <span class="arda">Arda</span><span class="gis">GIS</span>
-    </div>
+<div class="container">
+<div class="logo">
+<span class="arda">Arda</span><span class="gis">GIS</span>
+</div>
+<button class="begin-btn" onclick="window.location.href='Arda.html'">Begin</button>
+</div>
 </body>
 </html>
