@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ArdaGIS Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body { margin: 0; padding: 0; }
+        #map { height: 100vh; width: 100vw; background: #000; }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Custom tile layer to handle the non-standard naming
+        L.TileLayer.CustomTiles = L.TileLayer.extend({
+            getTileUrl: function(coords) {
+                return 'tiles/' + coords.z + '_' + coords.x + '_' + coords.y + '_4.jpg';
+            }
+        });
+
+        const map = L.map('map', {
+            crs: L.CRS.Simple,
+            minZoom: 1,
+            maxZoom: 14
+        }).setView([75, 75], 1);
+
+        new L.TileLayer.CustomTiles('', {
+            attribution: 'ArdaGIS',
+            tileSize: 256,
+            minZoom: 1,
+            maxZoom: 14
+        }).addTo(map);
+    </script>
+</body>
+</html>
