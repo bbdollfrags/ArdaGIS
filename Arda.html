@@ -7,72 +7,51 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         body { margin: 0; padding: 0; }
-        #map { height: 100vh; width: 100vw; background: #000; }
+        #map { height: 100vh; width: 100vw; background: #333; }
     </style>
 </head>
 <body>
     <div id="map"></div>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // Custom tile layer with fallback for different scales
-        L.TileLayer.CustomTiles = L.TileLayer.extend({
-            getTileUrl: function(coords) {
-                // Offset coordinates - your tiles start from 1,1 not 0,0
-                var x = coords.x + 1;
-                var y = coords.y + 1;
-                return 'Tiles/' + coords.z + '_' + x + '_' + y + '_4.jpg';
-            },
-            
-            createTile: function(coords, done) {
-                var tile = document.createElement('img');
-                var x = coords.x + 1;
-                var y = coords.y + 1;
-                var url = 'Tiles/' + coords.z + '_' + x + '_' + y + '_4.jpg';
+        // Based on LotRO map structure - tiles named z_x_y_scale.jpg
+        var map = L.map('map', {
+            crs: L.CRS.Simple,
+            minZoom: 0,
+            maxZoom: 5,
+            center: [128, 128],
+            zoom: 2
+        });
+
+        var yx = L.GridLayer.extend({
+            createTile: function(coords){
+                var tile = L.DomUtil.create('img', 'leaflet-tile');
+                var z = coords.z;
+                var x = coords.x;
+                var y = coords.y;
                 
-                tile.onload = function() {
-                    done(null, tile);
-                };
+                // Try different scales: _4 first, then _16, then _1
+                tile.onload = function() {};
                 
                 tile.onerror = function() {
-                    // Try _16 scale if _4 fails
-                    var url16 = 'Tiles/' + coords.z + '_' + x + '_' + y + '_16.jpg';
+                    var url16 = 'Tiles/' + z + '_' + x + '_' + y + '_16.jpg';
                     tile.onerror = function() {
-                        // Try _1 scale if _16 fails
-                        var url1 = 'Tiles/' + coords.z + '_' + x + '_' + y + '_1.jpg';
-                        tile.onerror = function() {
-                            done(null, tile);
-                        };
+                        var url1 = 'Tiles/' + z + '_' + x + '_' + y + '_1.jpg';
+                        tile.onerror = function() {};
                         tile.src = url1;
                     };
                     tile.src = url16;
                 };
                 
-                tile.src = url;
+                tile.src = 'Tiles/' + z + '_' + x + '_' + y + '_4.jpg';
                 return tile;
             }
         });
 
-        // Create map with CRS.Simple for non-geographic tiles
-        const map = L.map('map', {
-            crs: L.CRS.Simple,
-            minZoom: 1,
-            maxZoom: 5
-        });
-
-        // Calculate proper bounds based on tile ranges
-        // Zoom 2 has tiles roughly x:1-169, y:1-173
-        var bounds = [[0, 0], [173 * 256, 169 * 256]];
-        map.fitBounds([[0, 0], [40000, 40000]]);
-
-        new L.TileLayer.CustomTiles('', {
-            attribution: 'ArdaGIS',
+        new yx({
             tileSize: 256,
-            noWrap: true,
-            bounds: [[0, 0], [50000, 50000]]
+            noWrap: true
         }).addTo(map);
-
-        // Center the map on visible tiles
-        map.setView([20000, 20000], 2);
     </script>
 </body>
 </html>
