@@ -30,20 +30,30 @@
                 var x = coords.x;
                 var y = coords.y;
                 
-                // Try different scales: _4 first, then _16, then _1
-                tile.onload = function() {};
+                var url = 'Tiles/' + z + '_' + x + '_' + y + '_4.jpg';
+                console.log('Trying to load:', url);
+                
+                tile.onload = function() {
+                    console.log('SUCCESS:', url);
+                };
                 
                 tile.onerror = function() {
+                    console.log('FAILED _4:', url);
                     var url16 = 'Tiles/' + z + '_' + x + '_' + y + '_16.jpg';
+                    console.log('Trying _16:', url16);
                     tile.onerror = function() {
+                        console.log('FAILED _16:', url16);
                         var url1 = 'Tiles/' + z + '_' + x + '_' + y + '_1.jpg';
-                        tile.onerror = function() {};
+                        console.log('Trying _1:', url1);
+                        tile.onerror = function() {
+                            console.log('ALL FAILED for z=' + z + ' x=' + x + ' y=' + y);
+                        };
                         tile.src = url1;
                     };
                     tile.src = url16;
                 };
                 
-                tile.src = 'Tiles/' + z + '_' + x + '_' + y + '_4.jpg';
+                tile.src = url;
                 return tile;
             }
         });
