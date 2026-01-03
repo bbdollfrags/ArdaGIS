@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ArdaGIS</title>
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Cinzel:wght@400..900&family=Noto+Sans:ital,wght@0,100..900;1,100..900&family=Noto+Serif:ital,wght@0,100..900;1,100..900&display=swap');
 * {
 margin: 0;
 padding: 0;
@@ -13,16 +14,24 @@ box-sizing: border-box;
 body {
 background-color: #000;
 display: flex;
+flex-direction: column;
 justify-content: center;
 align-items: center;
 min-height: 100vh;
-font-family: 'Georgia', serif;
+font-family: 'Cinzel', Georgia, serif;
         }
 .container {
 display: flex;
 flex-direction: column;
 align-items: center;
 gap: 3rem;
+flex: 1;
+justify-content: center;
+        }
+.logo-wrapper {
+display: flex;
+align-items: center;
+gap: 1rem;
         }
 .logo {
 font-size: 8rem;
@@ -30,30 +39,46 @@ font-weight: bold;
 letter-spacing: -0.02em;
         }
 .arda {
-background: linear-gradient(to bottom, #ffffff 0%, #e8e8e8 50%, #808080 100%);
+background: linear-gradient(to bottom, #ffffff 0%, #b6b6b6 50%, #686868 100%);
 -webkit-background-clip: text;
 -webkit-text-fill-color: transparent;
 background-clip: text;
         }
 .gis {
-background: linear-gradient(to bottom, #ffed4e 0%, #d4af37 50%, #8b7355 100%);
+background: linear-gradient(to bottom, #fff280 0%, #d4af37 50%, #8b7355 100%);
 -webkit-background-clip: text;
 -webkit-text-fill-color: transparent;
 background-clip: text;
         }
+.beta-badge {
+display: inline-block;
+font-size: 0.8rem;
+font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+font-weight: 300;
+color: #808080;
+background: rgba(128, 128, 128, 0.2);
+border: 1px solid #808080;
+border-radius: 4px;
+padding: 0.2rem 0.6rem;
+letter-spacing: 0.1em;
+vertical-align: super;
+margin-left: 1rem;
+margin-bottom: 3rem;
+        }
 .descriptor {
+font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
 color: #808080;
 font-size: 1.5rem;
-font-weight: 300;
+font-weight: 100;
 letter-spacing: 0.05em;
 text-align: center;
-margin-top: -2rem;
+margin-top: -1.5rem;
         }
 .begin-btn {
 padding: 1.2rem 3rem;
 font-size: 1.5rem;
 font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
-font-weight: 600;
+font-weight: 100;
 color: #1a1a1a;
 background: #808080;
 border: 2px solid #808080;
@@ -70,33 +95,80 @@ border: 2px solid #808080;
 .begin-btn:active {
 transform: translateY(0);
         }
+.footer {
+width: 100%;
+padding: 2rem 1rem;
+background-color: #000;
+border-top: 1px solid #333;
+        }
+.footer-text {
+font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+color: #606060;
+font-size: 0.7rem;
+font-weight: 300;
+line-height: 1.6;
+text-align: center;
+max-width: 1200px;
+margin: 0 auto;
+        }
 @media (max-width: 768px) {
 .logo {
 font-size: 4rem;
             }
+.beta-badge {
+font-size: 0.6rem;
+padding: 0.15rem 0.5rem;
+margin-bottom: 1.5rem;
+            }
+.descriptor {
+font-size: 1.2rem;
+            }
 .begin-btn {
 font-size: 1.2rem;
 padding: 1rem 2.5rem;
+            }
+.footer-text {
+font-size: 0.65rem;
             }
         }
 @media (max-width: 480px) {
 .logo {
 font-size: 3rem;
             }
+.beta-badge {
+font-size: 0.5rem;
+padding: 0.1rem 0.4rem;
+margin-bottom: 1rem;
+margin-left: 0.5rem;
+            }
+.descriptor {
+font-size: 1rem;
+            }
 .begin-btn {
 font-size: 1rem;
 padding: 0.8rem 2rem;
+            }
+.footer-text {
+font-size: 0.6rem;
             }
         }
 </style>
 </head>
 <body>
 <div class="container">
+<div class="logo-wrapper">
 <div class="logo">
 <span class="arda">Arda</span><span class="gis">GIS</span>
 </div>
-<p class="descriptor">Your descriptor text here</p>
+<span class="beta-badge">BETA</span>
+</div>
+<p class="descriptor">Explore Arda with Greater Precision</p>
 <button class="begin-btn" onclick="window.location.href='Arda.html'">Begin</button>
 </div>
+<footer class="footer">
+<p class="footer-text">
+This is an unofficial fan website. It is not affiliated with, endorsed, supported, or approved by Daybreak Game Company LLC or Standing Stone Games LLC. No profit is made from this website. THE LORD OF THE RINGS ONLINE™ interactive video game © 2025 Daybreak Game Company LLC. Standing Stone Games and the Standing Stone Games logo are trademarks or registered trademarks of Daybreak Game Company LLC. The Lord of the Rings Online, Shadows of Angmar, Mines of Moria, Siege of Mirkwood, Rise of Isengard, Riders of Rohan, Helm's Deep, Mithril, Middle-earth Enterprises logo, and The Lord of the Rings and the characters, items, events, and places therein are trademarks of Middle-earth Enterprises, LLC used under license. Middle-earth Poster Map © 2007 MEE under license.
+</p>
+</footer>
 </body>
 </html>
