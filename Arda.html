@@ -16,6 +16,43 @@
             background: #000;
             color: #fff;
         }
+        #loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+        #loading-screen h2 {
+            color: #d4af37;
+            margin-bottom: 20px;
+            font-size: 2rem;
+            font-weight: 300;
+        }
+        #loading-bar {
+            width: 300px;
+            height: 4px;
+            background: #333;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        #loading-progress {
+            width: 0%;
+            height: 100%;
+            background: #d4af37;
+            transition: width 0.3s ease;
+        }
+        #loading-text {
+            margin-top: 10px;
+            color: #808080;
+            font-size: 14px;
+        }
         #map {
             width: 100vw;
             height: 100vh;
@@ -53,7 +90,15 @@
     </style>
 </head>
 <body>
-    <select id="region-select">
+    <div id="loading-screen">
+        <h2>Loading Map Data...</h2>
+        <div id="loading-bar">
+            <div id="loading-progress"></div>
+        </div>
+        <div id="loading-text">Downloading tiles...</div>
+    </div>
+    
+    <select id="region-select" style="display:none;">
         <option value="1">Region 1 - Eriador</option>
         <option value="2">Region 2 - Rhovanion</option>
         <option value="3">Region 3 - Gondor</option>
@@ -61,12 +106,180 @@
         <option value="5">Region 5 - Haradwaith</option>
         <option value="14">Region 14 - Tales of Yore</option>
     </select>
-    <div id="map"></div>
-    <div id="coords-display">
+    <div id="map" style="display:none;"></div>
+    <div id="coords-display" style="display:none;">
         <div>Region: <span id="region-num">1</span></div>
         <div>NS: <span id="ns-coord">0</span> | EW: <span id="ew-coord">0</span></div>
         <div>Tile: <span id="tile-info">-</span></div>
     </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script>
+        // Tile cache
+        const tileCache = {};
+        let zipData = null;
+
+        // Grid configuration from game code
+        const GridConfig = {
+            1: { NSOffset: 26, EWOffset: -110.75, maxRow: 187, maxCol: 138 },
+            2: { NSOffset: 61.22, EWOffset: -129.2, maxRow: 155, maxCol: 155 },
+            3: { NSOffset: -15.6, EWOffset: -96.4, maxRow: 110, maxCol: 88 },
+            4: { NSOffset: -15.6, EWOffset: -102.8, maxRow: 160, maxCol: 184 },
+            5: { NSOffset: 9.2, EWOffset: -141.2, maxRow: 64, maxCol: 74 },
+            14: { NSOffset: 81.2, EWOffset: -146, maxRow: 20, maxCol: 20 }
+        };
+
+        let currentRegion = 1;
+        let map;
+
+        // Update loading progress
+        function updateProgress(percent, text) {
+            document.getElementById('loading-progress').style.width = percent + '%';
+            document.getElementById('loading-text').textContent = text;
+        }
+
+        // Load and unzip tiles
+        async function loadTiles() {
+            try {
+                updateProgress(10, 'Downloading tiles.zip...');
+                
+                // Fetch the zip file
+                const response = await fetch('tiles.zip');
+                const blob = await response.blob();
+                
+                updateProgress(50, 'Extracting tiles...');
+                
+                // Load the zip
+                const zip = await JSZip.loadAsync(blob);
+                zipData = zip;
+                
+                updateProgress(100, 'Ready!');
+                
+                // Hide loading screen and show map
+                setTimeout(() => {
+                    document.getElementById('loading-screen').style.display = 'none';
+                    document.getElementById('map').style.display = 'block';
+                    document.getElementById('region-select').style.display = 'block';
+                    document.getElementById('coords-display').style.display = 'block';
+                    initMap(1);
+                }, 500);
+                
+            } catch (error) {
+                console.error('Error loading tiles:', error);
+                updateProgress(0, 'Error loading tiles. Please refresh.');
+            }
+        }
+
+        // Get tile from zip
+        async function getTileFromZip(tilePath) {
+            if (tileCache[tilePath]) {
+                return tileCache[tilePath];
+            }
+            
+            try {
+                const file = zipData.file(tilePath);
+                if (!file) {
+                    console.log('Tile not found:', tilePath);
+                    return null;
+                }
+                
+                const blob = await file.async('blob');
+                const url = URL.createObjectURL(blob);
+                tileCache[tilePath] = url;
+                return url;
+            } catch (error) {
+                console.error('Error extracting tile:', tilePath, error);
+                return null;
+            }
+        }
+
+        // Convert tile H/V coordinates to NS/EW
+        function HVtoNSEW(region, h, v, x, y) {
+            const config = GridConfig[region];
+            const NS = Math.floor((config.NSOffset - ((v + y / 200) * 0.8)) * 100 + 0.5) / 100;
+            const EW = Math.floor((config.EWOffset + ((h + x / 200) * 0.8)) * 100 + 0.5) / 100;
+            return { NS, EW };
+        }
+
+        // Custom tile layer for game tiles
+        L.TileLayer.GameTiles = L.TileLayer.extend({
+            createTile: function(coords, done) {
+                const tile = document.createElement('img');
+                const region = currentRegion;
+                const col = coords.x + 1;
+                const row = coords.y + 1;
+                const tilePath = `Tiles/${region}_${row}_${col}_1.jpg`;
+                
+                getTileFromZip(tilePath).then(url => {
+                    if (url) {
+                        tile.src = url;
+                        done(null, tile);
+                    } else {
+                        // Show error tile
+                        tile.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iIzFhMWExYSIvPjwvc3ZnPg==';
+                        done(null, tile);
+                    }
+                }).catch(error => {
+                    console.error('Tile load error:', error);
+                    done(error, tile);
+                });
+                
+                return tile;
+            }
+        });
+
+        // Initialize map
+        function initMap(region) {
+            const config = GridConfig[region];
+            
+            if (map) {
+                map.remove();
+            }
+
+            map = L.map('map', {
+                crs: L.CRS.Simple,
+                minZoom: 0,
+                maxZoom: 5,
+                center: [config.maxRow / 2, config.maxCol / 2],
+                zoom: 2
+            });
+
+            const gameLayer = new L.TileLayer.GameTiles('', {
+                tileSize: 200,
+                noWrap: true,
+                bounds: [[0, 0], [config.maxRow, config.maxCol]]
+            });
+            gameLayer.addTo(map);
+
+            // Update coordinates on mouse move
+            map.on('mousemove', function(e) {
+                const latlng = e.latlng;
+                const row = Math.floor(latlng.lat);
+                const col = Math.floor(latlng.lng);
+                const x = Math.floor((latlng.lng - col) * 200);
+                const y = Math.floor((latlng.lat - row) * 200);
+                
+                const coords = HVtoNSEW(region, col, row, x, y);
+                
+                document.getElementById('ns-coord').textContent = coords.NS.toFixed(2);
+                document.getElementById('ew-coord').textContent = coords.EW.toFixed(2);
+                document.getElementById('tile-info').textContent = `Row: ${row + 1}, Col: ${col + 1}`;
+            });
+        }
+
+        // Handle region change
+        document.getElementById('region-select').addEventListener('change', function(e) {
+            currentRegion = parseInt(e.target.value);
+            document.getElementById('region-num').textContent = currentRegion;
+            initMap(currentRegion);
+        });
+
+        // Start loading tiles when page loads
+        loadTiles();
+    </script>
+</body>
+</html>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
