@@ -47,19 +47,11 @@
         .leaflet-container {
             background: #000;
         }
-        .leaflet-tile {
-            border: 1px solid #222;
-        }
     </style>
 </head>
 <body>
     <select id="region-select">
         <option value="1">Region 1 - Eriador</option>
-        <option value="2">Region 2 - Rhovanion</option>
-        <option value="3">Region 3 - Gondor</option>
-        <option value="4">Region 4 - Mordor</option>
-        <option value="5">Region 5 - Haradwaith</option>
-        <option value="14">Region 14 - Tales of Yore</option>
     </select>
     <div id="map"></div>
     <div id="coords-display">
@@ -70,140 +62,111 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // Grid configuration from game code
-        const GridConfig = {
-            1: { NSOffset: 26, EWOffset: -110.75, maxRow: 187, maxCol: 138 },
-            2: { NSOffset: 61.22, EWOffset: -129.2, maxRow: 155, maxCol: 155 },
-            3: { NSOffset: -15.6, EWOffset: -96.4, maxRow: 110, maxCol: 88 },
-            4: { NSOffset: -15.6, EWOffset: -102.8, maxRow: 160, maxCol: 184 },
-            5: { NSOffset: 9.2, EWOffset: -141.2, maxRow: 64, maxCol: 74 },
-            14: { NSOffset: 81.2, EWOffset: -146, maxRow: 20, maxCol: 20 }
+        // Direct translation from game's Lua code
+        const Grid = {
+            1: {
+                NSOffset: 26,
+                EWOffset: -110.75,
+                YOffset: 37400,
+                XOffset: 9200
+            }
         };
+
+        const MaxRow = { 1: 187 };
+        const MaxCol = { 1: 138 };
 
         let currentRegion = 1;
         let map;
 
-        // Convert tile H/V coordinates to NS/EW
-        function HVtoNSEW(region, h, v, x, y) {
-            const config = GridConfig[region];
-            const NS = Math.floor((config.NSOffset - ((v + y / 200) * 0.8)) * 100 + 0.5) / 100;
-            const EW = Math.floor((config.EWOffset + ((h + x / 200) * 0.8)) * 100 + 0.5) / 100;
+        // Translated from Lua: GetNSEWfromHVXY
+        function GetNSEWfromHVXY(region, h, v, x, y) {
+            const NS = Math.floor((Grid[region].NSOffset - ((v + y / 200) * 0.8)) * 100 + 0.5) / 100;
+            const EW = Math.floor((Grid[region].EWOffset + ((h + x / 200) * 0.8)) * 100 + 0.5) / 100;
             return { NS, EW };
         }
 
-        // Custom tile layer for game tiles
-        L.TileLayer.GameTiles = L.TileLayer.extend({
-            createTile: function(coords, done) {
+        // Translated from Lua: GetHVXYfromNSEW
+        function GetHVXYfromNSEW(region, ns, ew) {
+            const ns2 = (Grid[region].NSOffset - ns) * 1.25;
+            const ew2 = (ew - Grid[region].EWOffset) * 1.25;
+            const h = Math.floor(ew2);
+            const v = Math.floor(ns2);
+            const x = Math.floor((ew2 - h) * 200 + 0.5);
+            const y = Math.floor((ns2 - v) * 200 + 0.5);
+            return { H: h, V: v, X: x, Y: y };
+        }
+
+        // Custom tile layer matching game logic
+        L.GridLayer.GameTiles = L.GridLayer.extend({
+            createTile: function(coords) {
                 const tile = document.createElement('img');
                 const region = currentRegion;
-                const col = coords.x + 1;
+                
+                // coords.y is row (V), coords.x is col (H) - but need to add 1 for 1-based indexing
                 const row = coords.y + 1;
-                const cfg = GridConfig[region];
+                const col = coords.x + 1;
 
-                // bounds check
-                if(row < 1 || col < 1 || row > cfg.maxRow || col > cfg.maxCol) {
-                    tile.src = this.options.errorTileUrl;
-                    done(null, tile);
-                    return tile;
-                }
-
-                // Try different zoom levels: 4, 16, 1, 8, 32
+                // Try multiple zoom levels like the game does
                 const zoomLevels = [4, 16, 1, 8, 32];
-                let currentZoomIndex = 0;
+                let zoomIndex = 0;
 
-                const tryNextZoom = () => {
-                    if (currentZoomIndex >= zoomLevels.length) {
-                        // All zoom levels failed, use error tile
-                        tile.src = this.options.errorTileUrl;
-                        done(null, tile);
+                const tryLoad = () => {
+                    if (zoomIndex >= zoomLevels.length) {
+                        // All failed, show blank
+                        tile.style.backgroundColor = '#1a1a1a';
                         return;
                     }
 
-                    const zoom = zoomLevels[currentZoomIndex];
+                    const zoom = zoomLevels[zoomIndex];
                     const url = `Tiles/${region}_${row}_${col}_${zoom}.jpg`;
                     
-                    tile.onload = () => {
-                        console.log('Tile loaded:', url);
-                        done(null, tile);
+                    const testImg = new Image();
+                    testImg.onload = () => {
+                        tile.src = url;
                     };
-                    
-                    tile.onerror = () => {
-                        console.log('Tile failed, trying next zoom:', url);
-                        currentZoomIndex++;
-                        tryNextZoom();
+                    testImg.onerror = () => {
+                        zoomIndex++;
+                        tryLoad();
                     };
-                    
-                    tile.src = url;
+                    testImg.src = url;
                 };
 
-                tryNextZoom();
+                tryLoad();
                 return tile;
             }
         });
 
-        // Initialize map
-        function initMap(region) {
-            const config = GridConfig[region];
-            
-            if (map) {
-                map.remove();
-            }
-
-            map = L.map('map', {
-                crs: L.CRS.Simple,
-                minZoom: 0,
-                maxZoom: 5,
-                center: [config.maxRow / 2, config.maxCol / 2],
-                zoom: 2,
-                maxBounds: [[0, 0], [config.maxRow, config.maxCol]],
-                maxBoundsViscosity: 1.0
-            });
-
-            const gameLayer = new L.TileLayer.GameTiles('', {
-                tileSize: 200,
-                noWrap: true,
-                bounds: [[0, 0], [config.maxRow, config.maxCol]],
-                maxNativeZoom: 5,
-                minNativeZoom: 0,
-                errorTileUrl: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iIzFhMWExYSIvPjwvc3ZnPg==',
-                keepBuffer: 2
-            });
-            gameLayer.addTo(map);
-
-            // Update coordinates on mouse move
-            map.on('mousemove', function(e) {
-                const latlng = e.latlng;
-                const row = Math.floor(latlng.lat);
-                const col = Math.floor(latlng.lng);
-                const x = Math.floor((latlng.lng - col) * 200);
-                const y = Math.floor((latlng.lat - row) * 200);
-                
-                const coords = HVtoNSEW(region, col, row, x, y);
-                
-                document.getElementById('ns-coord').textContent = coords.NS.toFixed(2);
-                document.getElementById('ew-coord').textContent = coords.EW.toFixed(2);
-                document.getElementById('tile-info').textContent = `Row: ${row + 1}, Col: ${col + 1}`;
-            });
-
-            // Console logging for debugging
-            gameLayer.on('tileerror', function(error) {
-                console.log('Tile load error:', error.tile.src);
-            });
-
-            gameLayer.on('tileload', function(e) {
-                console.log('Tile loaded:', e.tile.src);
-            });
-        }
-
-        // Handle region change
-        document.getElementById('region-select').addEventListener('change', function(e) {
-            currentRegion = parseInt(e.target.value);
-            document.getElementById('region-num').textContent = currentRegion;
-            initMap(currentRegion);
+        // Initialize map using CRS.Simple like the game
+        map = L.map('map', {
+            crs: L.CRS.Simple,
+            minZoom: 0,
+            maxZoom: 4,
+            center: [MaxRow[1] / 2, MaxCol[1] / 2],
+            zoom: 1
         });
 
-        // Initialize with Region 1
-        initMap(1);
+        const tileLayer = new L.GridLayer.GameTiles({
+            tileSize: 200,
+            noWrap: true
+        });
+        tileLayer.addTo(map);
+
+        // Update coordinates on mouse move (translated from game logic)
+        map.on('mousemove', function(e) {
+            const latlng = e.latlng;
+            const row = Math.floor(latlng.lat);
+            const col = Math.floor(latlng.lng);
+            const x = Math.floor((latlng.lng - col) * 200);
+            const y = Math.floor((latlng.lat - row) * 200);
+            
+            const coords = GetNSEWfromHVXY(currentRegion, col, row, x, y);
+            
+            document.getElementById('ns-coord').textContent = coords.NS.toFixed(2);
+            document.getElementById('ew-coord').textContent = coords.EW.toFixed(2);
+            document.getElementById('tile-info').textContent = `Row: ${row + 1}, Col: ${col + 1}`;
+        });
+
+        console.log('Map initialized. Center:', map.getCenter(), 'Zoom:', map.getZoom());
     </script>
 </body>
 </html>
