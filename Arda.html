@@ -93,19 +93,51 @@
 
         // Custom tile layer for game tiles
         L.TileLayer.GameTiles = L.TileLayer.extend({
-            getTileUrl: function(coords) {
+            createTile: function(coords, done) {
+                const tile = document.createElement('img');
                 const region = currentRegion;
                 const col = coords.x + 1;
                 const row = coords.y + 1;
                 const cfg = GridConfig[region];
 
-                // bounds check to avoid 404
+                // bounds check
                 if(row < 1 || col < 1 || row > cfg.maxRow || col > cfg.maxCol) {
-                    return ''; // Leaflet will use errorTileUrl
+                    tile.src = this.options.errorTileUrl;
+                    done(null, tile);
+                    return tile;
                 }
 
-                // FIXED: Changed from _1.jpg to _4.jpg to match actual tile files
-                return `Tiles/${region}_${row}_${col}_4.jpg`;
+                // Try different zoom levels: 4, 16, 1, 8, 32
+                const zoomLevels = [4, 16, 1, 8, 32];
+                let currentZoomIndex = 0;
+
+                const tryNextZoom = () => {
+                    if (currentZoomIndex >= zoomLevels.length) {
+                        // All zoom levels failed, use error tile
+                        tile.src = this.options.errorTileUrl;
+                        done(null, tile);
+                        return;
+                    }
+
+                    const zoom = zoomLevels[currentZoomIndex];
+                    const url = `Tiles/${region}_${row}_${col}_${zoom}.jpg`;
+                    
+                    tile.onload = () => {
+                        console.log('Tile loaded:', url);
+                        done(null, tile);
+                    };
+                    
+                    tile.onerror = () => {
+                        console.log('Tile failed, trying next zoom:', url);
+                        currentZoomIndex++;
+                        tryNextZoom();
+                    };
+                    
+                    tile.src = url;
+                };
+
+                tryNextZoom();
+                return tile;
             }
         });
 
@@ -122,14 +154,19 @@
                 minZoom: 0,
                 maxZoom: 5,
                 center: [config.maxRow / 2, config.maxCol / 2],
-                zoom: 2
+                zoom: 2,
+                maxBounds: [[0, 0], [config.maxRow, config.maxCol]],
+                maxBoundsViscosity: 1.0
             });
 
             const gameLayer = new L.TileLayer.GameTiles('', {
                 tileSize: 200,
                 noWrap: true,
                 bounds: [[0, 0], [config.maxRow, config.maxCol]],
-                errorTileUrl: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iIzFhMWExYSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTIiIGZpbGw9IiM2NjYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5UaWxlIE1pc3Npbmc8L3RleHQ+PC9zdmc+'
+                maxNativeZoom: 5,
+                minNativeZoom: 0,
+                errorTileUrl: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iIzFhMWExYSIvPjwvc3ZnPg==',
+                keepBuffer: 2
             });
             gameLayer.addTo(map);
 
