@@ -104,7 +104,8 @@
                     return ''; // Leaflet will use errorTileUrl
                 }
 
-                return `Tiles/${region}_${row}_${col}_1.jpg`;
+                // FIXED: Changed from _1.jpg to _4.jpg to match actual tile files
+                return `Tiles/${region}_${row}_${col}_4.jpg`;
             }
         });
 
