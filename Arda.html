@@ -1,57 +1,164 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ArdaGIS</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        body { margin: 0; padding: 0; }
-        #map { height: 100vh; width: 100vw; background: #333; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            background: #000;
+            color: #fff;
+        }
+        #map {
+            width: 100vw;
+            height: 100vh;
+            background: #000;
+        }
+        #coords-display {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            z-index: 1000;
+            border: 1px solid #444;
+        }
+        #region-select {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 8px 15px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid #444;
+            color: #fff;
+            border-radius: 4px;
+            font-size: 14px;
+            z-index: 1000;
+        }
+        .leaflet-container {
+            background: #000;
+        }
+        .leaflet-tile {
+            border: 1px solid #222;
+        }
     </style>
 </head>
 <body>
+    <select id="region-select">
+        <option value="1">Region 1 - Eriador</option>
+        <option value="2">Region 2 - Rhovanion</option>
+        <option value="3">Region 3 - Gondor</option>
+        <option value="4">Region 4 - Mordor</option>
+        <option value="5">Region 5 - Haradwaith</option>
+        <option value="14">Region 14 - Tales of Yore</option>
+    </select>
     <div id="map"></div>
+    <div id="coords-display">
+        <div>Region: <span id="region-num">1</span></div>
+        <div>NS: <span id="ns-coord">0</span> | EW: <span id="ew-coord">0</span></div>
+        <div>Tile: <span id="tile-info">-</span></div>
+    </div>
+
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // Match the Google Maps version settings
-        var TILE_SIZE = 200;
-        var MAX_ZOOM = 9;
-        var MIN_ZOOM = 0;
+        // Grid configuration from game code
+        const GridConfig = {
+            1: { NSOffset: 26, EWOffset: -110.75, maxRow: 187, maxCol: 138 },
+            2: { NSOffset: 61.22, EWOffset: -129.2, maxRow: 155, maxCol: 155 },
+            3: { NSOffset: -15.6, EWOffset: -96.4, maxRow: 110, maxCol: 88 },
+            4: { NSOffset: -15.6, EWOffset: -102.8, maxRow: 160, maxCol: 184 },
+            5: { NSOffset: 9.2, EWOffset: -141.2, maxRow: 64, maxCol: 74 },
+            14: { NSOffset: 81.2, EWOffset: -146, maxRow: 20, maxCol: 20 }
+        };
 
-        // Create map with CRS.Simple for custom tiles
-        var map = L.map('map', {
-            crs: L.CRS.Simple,
-            minZoom: MIN_ZOOM,
-            maxZoom: MAX_ZOOM
-        });
+        let currentRegion = 1;
+        let map;
 
-        // Custom tile layer matching Google Maps format: Tiles/{z}/{y}_{x}.png
-        var tileLayer = L.GridLayer.extend({
-            createTile: function(coords) {
-                var tile = L.DomUtil.create('img', 'leaflet-tile');
-                var url = 'Tiles/' + coords.z + '/' + coords.y + '_' + coords.x + '.png';
-                
-                tile.onload = function() {
-                    console.log('Loaded:', url);
-                };
-                
-                tile.onerror = function() {
-                    console.log('Failed:', url);
-                };
-                
-                tile.src = url;
-                return tile;
+        // Convert tile H/V coordinates to NS/EW
+        function HVtoNSEW(region, h, v, x, y) {
+            const config = GridConfig[region];
+            const NS = Math.floor((config.NSOffset - ((v + y / 200) * 0.8)) * 100 + 0.5) / 100;
+            const EW = Math.floor((config.EWOffset + ((h + x / 200) * 0.8)) * 100 + 0.5) / 100;
+            return { NS, EW };
+        }
+
+        // Custom tile layer for game tiles
+        L.TileLayer.GameTiles = L.TileLayer.extend({
+            getTileUrl: function(coords) {
+                const region = currentRegion;
+                const col = coords.x + 1;
+                const row = coords.y + 1;
+                return `Tiles/${region}_${row}_${col}_1.jpg`;
             }
         });
 
-        new tileLayer({
-            tileSize: TILE_SIZE,
-            noWrap: true
-        }).addTo(map);
+        // Initialize map
+        function initMap(region) {
+            const config = GridConfig[region];
+            
+            if (map) {
+                map.remove();
+            }
 
-        // Set initial view - adjust these coordinates as needed
-        map.setView([50, 50], 3);
+            map = L.map('map', {
+                crs: L.CRS.Simple,
+                minZoom: 0,
+                maxZoom: 5,
+                center: [config.maxRow / 2, config.maxCol / 2],
+                zoom: 2
+            });
+
+            const gameLayer = new L.TileLayer.GameTiles('', {
+                tileSize: 200,
+                noWrap: true,
+                bounds: [[0, 0], [config.maxRow, config.maxCol]],
+                errorTileUrl: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iIzFhMWExYSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTIiIGZpbGw9IiM2NjYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5UaWxlIE1pc3Npbmc8L3RleHQ+PC9zdmc+'
+            });
+            gameLayer.addTo(map);
+
+            // Update coordinates on mouse move
+            map.on('mousemove', function(e) {
+                const latlng = e.latlng;
+                const row = Math.floor(latlng.lat);
+                const col = Math.floor(latlng.lng);
+                const x = Math.floor((latlng.lng - col) * 200);
+                const y = Math.floor((latlng.lat - row) * 200);
+                
+                const coords = HVtoNSEW(region, col, row, x, y);
+                
+                document.getElementById('ns-coord').textContent = coords.NS.toFixed(2);
+                document.getElementById('ew-coord').textContent = coords.EW.toFixed(2);
+                document.getElementById('tile-info').textContent = `Row: ${row + 1}, Col: ${col + 1}`;
+            });
+
+            // Console logging for debugging
+            gameLayer.on('tileerror', function(error) {
+                console.log('Tile load error:', error.tile.src);
+            });
+
+            gameLayer.on('tileload', function(e) {
+                console.log('Tile loaded:', e.tile.src);
+            });
+        }
+
+        // Handle region change
+        document.getElementById('region-select').addEventListener('change', function(e) {
+            currentRegion = parseInt(e.target.value);
+            document.getElementById('region-num').textContent = currentRegion;
+            initMap(currentRegion);
+        });
+
+        // Initialize with Region 1
+        initMap(1);
     </script>
 </body>
 </html>
